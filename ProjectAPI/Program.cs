@@ -45,6 +45,8 @@ namespace ProjectAPI
             builder.Services.AddIdentity<AppUser, IdentityRole>().
                 AddEntityFrameworkStores<AppDbContext>();
 
+            builder.Configuration.AddUserSecrets<Program>(optional: true);
+
             builder.Services.AddTransient<IAuthentication, Authentication>();
             builder.Services.AddTransient<Service>();
             builder.Services.AddCors(options =>
