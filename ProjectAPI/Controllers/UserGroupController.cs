@@ -54,6 +54,25 @@ namespace ProjectAPI.Controllers
             return Ok(userGroup);
         }
 
+        [HttpGet("GetUsersGroupsByGroupId/{groupId}")] 
+        public async Task<IActionResult> GetUsersGroupsByGroupId(string groupId)
+        {
+            if (string.IsNullOrEmpty(groupId))
+            {
+                return BadRequest("User ID cannot be null or empty.");
+            }
+
+            var group = await groupsUnitOfWork.Entity.GetAsync(groupId);
+
+            var userGroups = await userGroupUnitOfWork.Entity
+                .FindAll(x => x.GroupName == group.GroupName);
+            if (userGroups == null || !userGroups.Any())
+            {
+                return NotFound($"No groups found for user with ID {groupId}.");
+            }
+            return Ok(userGroups);
+        }
+
 
         [HttpPost("JoinGroup")]
         [Authorize("UserRole")]
