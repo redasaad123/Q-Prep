@@ -16,7 +16,7 @@ namespace Core.Model
         public List<string>? Images { get; set; } 
         public string? TypeOfBody { get; set; }
 
-        public List<string> likes { get; set; } 
+        public List<string>? likes { get; set; } 
         public DateTime? postDate { get; set; }
  
 

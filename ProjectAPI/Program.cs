@@ -35,8 +35,10 @@ namespace ProjectAPI
                     options => options.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName));
             });
 
-            builder.Services.AddAuthorization(auth => auth.AddPolicy("AdminRole", p => p.RequireRole("Admin")));
-            builder.Services.AddAuthorization(auth => auth.AddPolicy("UserRole", p => p.RequireRole("User")));
+            // Fix for ASP0025: Use AddAuthorizationBuilder to register authorization services and construct policies
+            var authorizationBuilder = builder.Services.AddAuthorizationBuilder();
+            authorizationBuilder.AddPolicy("AdminRole", p => p.RequireRole("Admin"));
+            authorizationBuilder.AddPolicy("UserRole", p => p.RequireRole("User"));
 
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("jwt"));
             builder.Services.Configure<EmailConfgSettings>(builder.Configuration.GetSection("email-confg"));
@@ -48,8 +50,8 @@ namespace ProjectAPI
 
             builder.Services.AddScoped<PasswordHasher<AppUser>>();
 
-            builder.Services.AddIdentity<AppUser, IdentityRole>().
-                AddEntityFrameworkStores<AppDbContext>();
+            builder.Services.AddIdentity<AppUser, IdentityRole>()
+                .AddEntityFrameworkStores<AppDbContext>();
 
             builder.Configuration.AddUserSecrets<Program>(optional: true);
 
@@ -66,7 +68,7 @@ namespace ProjectAPI
             });
             builder.Services.AddSignalR().AddHubOptions<CommunityHub>(options =>
             {
-                options.EnableDetailedErrors = true; // عرض أخطاء 0مفصلة
+                options.EnableDetailedErrors = true; // عرض أخطاء مفصلة
             });
             builder.Services.AddSingleton<IUserIdProvider, customId>();
 
@@ -80,15 +82,23 @@ namespace ProjectAPI
             {
                 options.SaveToken = true;
                 options.RequireHttpsMetadata = true;
+
+                // Fix for CS8604: Ensure the configuration value is not null
+                var jwtKey = builder.Configuration["jwt:Key"];
+                if (string.IsNullOrEmpty(jwtKey))
+                {
+                    throw new InvalidOperationException("JWT Key is not configured.");
+                }
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidIssuer = builder.Configuration["jwt:Issuer"],
                     ValidateAudience = true,
                     ValidAudience = builder.Configuration["jwt:Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["jwt:Key"]))
-
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
                 };
+
                 options.Events = new JwtBearerEvents
                 {
                     OnMessageReceived = context =>
@@ -97,7 +107,6 @@ namespace ProjectAPI
                         var path = context.HttpContext.Request.Path;
                         if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/communityHub"))
                         {
-
                             context.Token = accessToken;
                         }
 
@@ -105,6 +114,7 @@ namespace ProjectAPI
                     }
                 };
             });
+
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
@@ -116,29 +126,26 @@ namespace ProjectAPI
                     Scheme = "Bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
-
                 });
 
                 options.AddSecurityRequirement(securityRequirement: new OpenApiSecurityRequirement
                 {
-                    {
-                        new OpenApiSecurityScheme
                         {
-                            Reference = new OpenApiReference
+                            new OpenApiSecurityScheme
                             {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "Bearer"
+                                },
+                                Name = "Bearer",
+                                In = ParameterLocation.Header
                             },
-                            Name = "Bearer",
-                            In = ParameterLocation.Header
-                        },
-                        new List<string>()
-
-                    }
-
+                            new List<string>()
+                        }
                 });
-
             });
+
             var app = builder.Build();
             app.UseStaticFiles();
             app.UseSwagger();
