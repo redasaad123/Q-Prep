@@ -1,6 +1,7 @@
 ﻿
 using Core.Interfaces;
 using Core.Model;
+using Core.Services;
 using Core.Servises;
 using Core.Settings;
 using Infrastructure;
@@ -39,6 +40,9 @@ namespace ProjectAPI
 
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("jwt"));
             builder.Services.Configure<EmailConfgSettings>(builder.Configuration.GetSection("email-confg"));
+            builder.Services.AddScoped<CodeDatabaseServices>();
+            builder.Services.AddScoped<SendEmailServices>();
+            builder.Services.AddScoped<GenerateCodeVerify>();
 
             builder.Services.AddTransient(typeof(IUnitOfWork<>), typeof(UnitOfWork<>));
 

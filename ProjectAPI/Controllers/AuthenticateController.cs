@@ -98,10 +98,34 @@ namespace ProjectAPI.Controllers
 
              await sendMessage.SendEmail(dto.Email);
 
-            if(!await databaseServices.IsCodeValid(dto.Email , dto.Code))
+            return Ok("The Code Is Sent To Your Email, Please Check Your Email And Enter The Code To Verify Your Account");
+
+        }
+
+
+        // Pseudocode for fixing the password reset logic in verfiycode action
+        // 1. Validate ModelState
+        // 2. Check if code is valid for the email
+        // 3. Find user by email
+        // 4. If user not found, return NotFound
+        // 5. Check if new password matches confirmed new password
+        // 6. Hash new password and update user
+        // 7. Save changes and return success
+
+        [HttpPost("verfiyCode")]
+        public async Task<IActionResult> verfiycode([FromForm] VerifyCodeDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (!await databaseServices.IsCodeValid(dto.Email, dto.Code))
                 return BadRequest("The Code Is Invalid");
 
-            if (dto.NewPassword == dto.ConfirmedNewPassword)
+            var user = await userManager.FindByEmailAsync(dto.Email);
+            if (user == null)
+                return NotFound("User Is NotFound");
+
+            if (dto.NewPassword != dto.ConfirmedNewPassword)
                 return BadRequest("The New Password Is Not Match With Confirmed New Password");
 
             var hashPassword = passwordHasher.HashPassword(user, dto.NewPassword + "Abcd123#");
@@ -109,33 +133,29 @@ namespace ProjectAPI.Controllers
             await userManager.UpdateAsync(user);
             appUserUnitOfWork.Save();
             return Ok("The Password Is Changed");
-
         }
 
 
-        [HttpPost("ChangePassword/{id}")]
+        [HttpPost("ChangePassword")]
         [Authorize("UserRole")]
 
-        public async Task<IActionResult> ChangePassword([FromForm] ChangePasswordDTO dto , string id)
+        public async Task<IActionResult> ChangePassword([FromForm] ChangePasswordDTO dto )
         {
             if(!ModelState.IsValid)
                 return BadRequest(ModelState);
-
-            string idUser;
-
-            if (id is null)
-                idUser = userManager.GetUserId(HttpContext.User);
-            else idUser = id.ToString();
-
+            var idUser = userManager.GetUserId(HttpContext.User);
+      
             var user = await userManager.FindByIdAsync(idUser);
             if (user == null) 
                 return NotFound("User Is NotFound");
 
 
-            var hashOldPassword = passwordHasher.HashPassword(user, dto.OldPassword + "Abcd123#");
+            var ChickPassword = await userManager.CheckPasswordAsync(user,dto.OldPassword + "Abcd123#");
+            if (!ChickPassword)
+                return BadRequest("The Old Password InCorrect");
 
-            if (hashOldPassword != user.PasswordHash)
-                return BadRequest("The Old Password InValid ");
+            if (dto.NewPassword != dto.ConfirmedNewPassword)
+                return BadRequest("The New Password Is Not Match With Confirmed New Password");
 
             var hashPassword = passwordHasher.HashPassword(user, dto.NewPassword + "Abcd123#");
             user.PasswordHash = hashPassword;

@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace Core.AuthenticationDTO
 {
-    public class ForgetPasswordDTO 
+    public class VerifyCodeDTO : BasePasswordDTO
     {
         public string Email { get; set; }
-
-        
+        public string Code { get; set; }
     }
 }
