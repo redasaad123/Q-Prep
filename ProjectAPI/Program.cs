@@ -36,7 +36,9 @@ namespace ProjectAPI
 
             builder.Services.AddAuthorization(auth => auth.AddPolicy("AdminRole", p => p.RequireRole("Admin")));
             builder.Services.AddAuthorization(auth => auth.AddPolicy("UserRole", p => p.RequireRole("User")));
+
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("jwt"));
+            builder.Services.Configure<EmailConfgSettings>(builder.Configuration.GetSection("email-confg"));
 
             builder.Services.AddTransient(typeof(IUnitOfWork<>), typeof(UnitOfWork<>));
 

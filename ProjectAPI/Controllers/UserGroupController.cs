@@ -42,19 +42,9 @@ namespace ProjectAPI.Controllers
         }
 
 
-        [HttpGet("GetUserGroupById/{id}")]
-        [Authorize("AdminRole")]
-        public async Task<IActionResult> GetUserGroupById(string id)
-        {
-            var userGroup = await userGroupUnitOfWork.Entity.GetAsync(id);
-            if (userGroup == null)
-            {
-                return NotFound($"User group with ID {id} not found.");
-            }
-            return Ok(userGroup);
-        }
+        [HttpGet("GetUsersGroupsByGroupId/{groupId}")]
 
-        [HttpGet("GetUsersGroupsByGroupId/{groupId}")] 
+        [Authorize("UserRole")]
         public async Task<IActionResult> GetUsersGroupsByGroupId(string groupId)
         {
             if (string.IsNullOrEmpty(groupId))

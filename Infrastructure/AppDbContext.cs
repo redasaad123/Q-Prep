@@ -46,6 +46,8 @@ namespace Infrastructure
         public DbSet<UserGroup> UserGroup { get; set; }
         public DbSet<Posts> Posts { get; set; }
 
+        public DbSet<CodeVerification> VerificationCode { get; set; }
+
 
 
     }

@@ -1,6 +1,8 @@
 ﻿using Core.AuthenticationDTO;
 using Core.Interfaces;
 using Core.Model;
+using Core.Services;
+using Core.Servises;
 using Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -26,11 +28,13 @@ namespace ProjectAPI.Controllers
         private readonly IUnitOfWork<AppUser> appUserUnitOfWork;
         private readonly Microsoft.AspNetCore.Hosting.IHostingEnvironment hosting;
         private readonly IAuthentication authentication;
+        private readonly SendEmailServices sendMessage;
+        private readonly CodeDatabaseServices databaseServices;
         private readonly JwtSettings jwtSettings;
         
 
         public AuthenticateController(PasswordHasher<AppUser> passwordHasher,IOptions<JwtSettings> options, RoleManager<IdentityRole> roleManager, UserManager<AppUser> userManager
-            , IUnitOfWork<AppUser> appUserUnitOfWork, Microsoft.AspNetCore.Hosting.IHostingEnvironment hosting , IAuthentication authentication )
+            , IUnitOfWork<AppUser> appUserUnitOfWork, Microsoft.AspNetCore.Hosting.IHostingEnvironment hosting , IAuthentication authentication, SendEmailServices sendMessage , CodeDatabaseServices databaseServices )
         {
             this.passwordHasher = passwordHasher;
             this.roleManager = roleManager;
@@ -38,6 +42,8 @@ namespace ProjectAPI.Controllers
             this.appUserUnitOfWork = appUserUnitOfWork;
             this.hosting = hosting;
             this.authentication = authentication;
+            this.sendMessage = sendMessage;
+            this.databaseServices = databaseServices;
             jwtSettings = options.Value;
         }
 
@@ -80,7 +86,7 @@ namespace ProjectAPI.Controllers
         }
 
         [HttpPost("ForgetPassword")]
-        public async Task<IActionResult> ForgetPassword(ForgetPasswordDTO dto)
+        public async Task<IActionResult> ForgetPassword([FromForm]ForgetPasswordDTO dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -90,15 +96,27 @@ namespace ProjectAPI.Controllers
             if (user == null)
                 return NotFound("Email Is NotFound");
 
+             await sendMessage.SendEmail(dto.Email);
 
-            return Ok(user.Id);
+            if(!await databaseServices.IsCodeValid(dto.Email , dto.Code))
+                return BadRequest("The Code Is Invalid");
+
+            if (dto.NewPassword == dto.ConfirmedNewPassword)
+                return BadRequest("The New Password Is Not Match With Confirmed New Password");
+
+            var hashPassword = passwordHasher.HashPassword(user, dto.NewPassword + "Abcd123#");
+            user.PasswordHash = hashPassword;
+            await userManager.UpdateAsync(user);
+            appUserUnitOfWork.Save();
+            return Ok("The Password Is Changed");
+
         }
 
 
         [HttpPost("ChangePassword/{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize("UserRole")]
 
-        public async Task<IActionResult> ChangePassword([FromForm] BasePasswordDTO dto , string id)
+        public async Task<IActionResult> ChangePassword([FromForm] ChangePasswordDTO dto , string id)
         {
             if(!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -112,6 +130,12 @@ namespace ProjectAPI.Controllers
             var user = await userManager.FindByIdAsync(idUser);
             if (user == null) 
                 return NotFound("User Is NotFound");
+
+
+            var hashOldPassword = passwordHasher.HashPassword(user, dto.OldPassword + "Abcd123#");
+
+            if (hashOldPassword != user.PasswordHash)
+                return BadRequest("The Old Password InValid ");
 
             var hashPassword = passwordHasher.HashPassword(user, dto.NewPassword + "Abcd123#");
             user.PasswordHash = hashPassword;
