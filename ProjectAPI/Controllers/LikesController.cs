@@ -62,7 +62,7 @@ namespace ProjectAPI.Controllers
         }
 
 
-        [HttpPost]
+        [HttpPost("IsLiked/{postId}")]
         public async Task<IActionResult> IsLiked(string postId)
         {
             var post = await postsUnitOfWork.Entity.GetAsync(postId);
