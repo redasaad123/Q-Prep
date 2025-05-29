@@ -19,52 +19,63 @@ namespace Core.Services
         private readonly IUnitOfWork<CodeVerification> codeUnitOfWork;
         private readonly CodeDatabaseServices databaseServices;
 
-        public SendEmailServices(IOptions<EmailConfgSettings> options , IUnitOfWork<CodeVerification> CodeUnitOfWork , CodeDatabaseServices databaseServices)
+        public SendEmailServices(IOptions<EmailConfgSettings> options, IUnitOfWork<CodeVerification> CodeUnitOfWork, CodeDatabaseServices databaseServices)
         {
             email_confg = options.Value;
             codeUnitOfWork = CodeUnitOfWork;
             this.databaseServices = databaseServices;
         }
 
-       
+
 
         public async Task SendEmail(string Email)
         {
-            var email = email_confg.Email;
-            var password =email_confg.Password;
-            var host =  email_confg.Host;
-            var port = email_confg.Port;
-
-
-            var smtpClient = new SmtpClient(host, port);
-            smtpClient.EnableSsl = true;
-
-            smtpClient.UseDefaultCredentials = false;
-
-            smtpClient.Credentials = new NetworkCredential(email, password);
-
-
-            string verificationCode;
-
-
-            if (await codeUnitOfWork.Entity.Any(x=>x.Email == Email))
+            try
             {
-                verificationCode = codeUnitOfWork.Entity.Find(x => x.Email == Email).Code;
+
+                var email = email_confg.Email;
+                var password = email_confg.Password;
+                var host = email_confg.Host;
+                var port = email_confg.Port;
+
+
+                var smtpClient = new SmtpClient(host, port);
+                smtpClient.EnableSsl = true;
+
+                smtpClient.UseDefaultCredentials = false;
+
+                smtpClient.Credentials = new NetworkCredential(email, password);
+
+
+                string verificationCode;
+
+
+                if (await codeUnitOfWork.Entity.Any(x => x.Email == Email))
+                {
+                    verificationCode = codeUnitOfWork.Entity.Find(x => x.Email == Email).Code;
+                }
+                else
+                {
+                    verificationCode = GenerateCodeVerify.GenerateCode(6);
+
+                    await databaseServices.SaveCode(verificationCode, Email);
+
+                }
+
+                // Generate a verification code
+
+
+                var message = new MailMessage(email!, Email, "Verification", $"Verification Code: {verificationCode} , Please enter this code to verify your identity. Do not share it with anyone.");
+
+                await smtpClient.SendMailAsync(message);
             }
-            else
+            catch (Exception ex)
             {
-                verificationCode = GenerateCodeVerify.GenerateCode(6);
-
-                await databaseServices.SaveCode(verificationCode, Email);
-
+                // Log the exception (to file, console, or database)
+                Console.WriteLine(ex.Message);
+                throw; // or handle accordingly
             }
 
-            // Generate a verification code
-             
-
-            var message = new MailMessage(email!, Email, "Verification" , $"Verification Code: {verificationCode} , Please enter this code to verify your identity. Do not share it with anyone." );
-
-            await smtpClient.SendMailAsync(message);
 
         }
     }

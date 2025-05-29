@@ -62,6 +62,26 @@ namespace ProjectAPI.Controllers
         }
 
 
+        [HttpPost]
+        public async Task<IActionResult> IsLiked(string postId)
+        {
+            var post = await postsUnitOfWork.Entity.GetAsync(postId);
+            if (post == null)
+            {
+                return NotFound("Post not found");
+            }
+            var user = await userManager.GetUserAsync(User);
+            if (post.likes.Any(x => x == user.Id))
+            {
+                return Ok(new { IsLiked = true });
+            }
+            else
+            {
+                return Ok(new { IsLiked = false });
+            }
+        }
+
+
         [HttpPost("RemoveLike/{postId}")]
         public async Task<IActionResult> RemoveLike(string postId)
         {
