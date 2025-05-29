@@ -49,7 +49,7 @@ namespace ProjectAPI.Controllers
                 header = p.header,
                 Text = p.Text,
                 Images = p.Images, // Assuming you have a way to get images
-                likes = p.likes.Count,
+                likes = p.likes.Count(),
                 postDate = p.postDate,
                 UserId = p.UserId,
                 UserImage = userManager.Users.FirstOrDefault(u => u.Id == p.UserId)?.Photo,

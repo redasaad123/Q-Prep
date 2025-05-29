@@ -30,7 +30,7 @@ namespace ProjectAPI.Controllers
         [HttpPost("AddLike/{postId}")]
 
         
-        public async Task<IActionResult> AddLike(string postId)
+        public async Task<IActionResult> AddLike(string postId )
         {
             var post = await postsUnitOfWork.Entity.GetAsync(postId);
             if (post == null)
@@ -56,8 +56,8 @@ namespace ProjectAPI.Controllers
 
             await postsUnitOfWork.Entity.UpdateAsync(post);
             postsUnitOfWork.Save();
-            await hubContext.Clients.Group(group.GroupName).SendAsync("Like", post);
-            return Ok(new { LikesCount = post.likes.Count });
+            await hubContext.Clients.Group(group.GroupName).SendAsync("Like", post.likes.Count());
+            return Ok(new { LikesCount = post.likes.Count()});
 
         }
 
@@ -71,6 +71,14 @@ namespace ProjectAPI.Controllers
                 return NotFound("Post not found");
             }
 
+            var user = await userManager.GetUserAsync(User);
+
+            if (post.likes.Any(x => x == user.Id))
+            {
+                post.likes.Remove(user.Id);
+            }
+            
+
             var group = await groupsUnitOfWork.Entity.GetAsync(post.groupId);
             if (group == null)
             {
@@ -79,8 +87,8 @@ namespace ProjectAPI.Controllers
             
             await postsUnitOfWork.Entity.UpdateAsync(post);
             postsUnitOfWork.Save();
-            await hubContext.Clients.Group(group.GroupName).SendAsync("Like", post);
-            return Ok(new { LikesCount = post.likes });
+            await hubContext.Clients.Group(group.GroupName).SendAsync("Like", post.likes.Count());
+            return Ok(new { LikesCount = post.likes.Count()});
         }
     }
 }
