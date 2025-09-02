@@ -54,6 +54,7 @@ namespace ProjectAPI
                 .AddEntityFrameworkStores<AppDbContext>();
 
             builder.Configuration.AddUserSecrets<Program>(optional: true);
+            builder.Configuration.AddEnvironmentVariables();
 
             builder.Services.AddTransient<IAuthentication, Authentication>();
             builder.Services.AddTransient<Service>();
