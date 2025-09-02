@@ -31,7 +31,11 @@ namespace ProjectAPI
 
             builder.Services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseSqlServer(builder.Configuration["ConnectionStrings:ProdcutionConnection"],
+                var conn = builder.Configuration.GetConnectionString("ProdcutionConnection");
+                if (string.IsNullOrEmpty(conn))
+                    throw new InvalidOperationException("Connection string 'ProdcutionConnection' is missing!");
+
+                options.UseSqlServer(conn,
                     options => options.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName));
             });
 
